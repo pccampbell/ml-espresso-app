@@ -1,0 +1,53 @@
+name: build_upload
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3.13.0
+      - uses: subosito/flutter-action@v2.10.0
+        with:
+          channel: 'stable'
+      - name: Todays Date
+        id: date
+        run: echo "::set-output name=date::$(date + '%Y-%m-%d')"
+      - run: flutter pub get
+      - run: flutter build apk
+      - name: Upload to GDrive
+        uses: adityak74/google-drive-upload-git-action@main
+        with:
+          credentials: ${{ secrets.GCREDS }}
+          filename: "build/app/outputs/apk/release/app-release.apk"
+          folderId: ${{ secrets.GFOLDERID }}
+          name: espresso_flow_ml_apk_${{steps.date.outputs.date}}.apk
+          overwrite: "true"
+      - name: Send Slack Notif
+        id: slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          # For posting a rich message using Block Kit
+          payload: |
+            {
+              "text": "New GitHub Action build result: ${{ job.status }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "New GitHub Action build result: ${{ job.status }} https://drive.google.com/drive/folders/1mA2vroEu00ELZ-y7ZjcQ2WsDJR0eA_77?usp=drive_link"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+  
