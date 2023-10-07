@@ -21,7 +21,7 @@ jobs:
           channel: 'stable'
       - name: Todays Date
         id: date
-        run: echo "::set-output name=date::$(date + '%Y-%m-%d')"
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
       - run: flutter pub get
       - run: flutter build apk
       - name: Upload to GDrive
@@ -30,7 +30,7 @@ jobs:
           credentials: ${{ secrets.GCREDS }}
           filename: "build/app/outputs/apk/release/app-release.apk"
           folderId: ${{ secrets.GFOLDERID }}
-          name: espresso_flow_ml_apk_${{steps.date.outputs.date}}.apk
+          name: espresso_flow_ml_apk_${{ steps.date.outputs.date }}.apk
           overwrite: "true"
       - name: Send Slack Notif
         id: slack
