@@ -34,7 +34,7 @@ class _CameraPageState extends State<CameraPageNew> {
       setState(() {
         isCamerasInitialized = true;
         _controller = CameraController(
-          selectedCamera,
+          selectedCamera!,
           ResolutionPreset.max,
           imageFormatGroup: ImageFormatGroup.yuv420,
         );
