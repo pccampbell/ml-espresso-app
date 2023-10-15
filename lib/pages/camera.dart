@@ -22,7 +22,7 @@ class _CameraPageState extends State<CameraPage> {
     setState(() {
       isCamerasInitialized = true;
       _controller = CameraController(
-        cameras[1],
+        cameras[0],
         ResolutionPreset.max,
         imageFormatGroup: ImageFormatGroup.yuv420,); // Initialize the controller here
     });
@@ -47,11 +47,16 @@ class _CameraPageState extends State<CameraPage> {
       return Container();
     }
     return Scaffold(
-      body: Stack(children: [
-        Container(
-          alignment: Alignment.center,
-          height: double.infinity,
-          child: Expanded(flex: 1, child: CameraPreview(_controller)),
+      body: Stack(
+        children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            double aspectRatio = constraints.maxWidth / constraints.maxHeight;
+            return AspectRatio(
+              aspectRatio: aspectRatio,
+              child: CameraPreview(_controller),
+            );
+          },
         )
       ]),
     );

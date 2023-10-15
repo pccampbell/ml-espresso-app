@@ -44,7 +44,7 @@ class _MyHomePageState extends State<MyHomePage> {
         titleText = 'Logs';
         break;
       case 1:
-        page = CameraPage();
+        page = CameraPageNew();
         titleText = 'Graph ML';
         break;
       case 2:
