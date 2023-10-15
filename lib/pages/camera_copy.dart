@@ -1,12 +1,12 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-class CameraPage extends StatefulWidget {
+class CameraPageNew extends StatefulWidget {
   @override
-  State<CameraPage> createState() => _CameraPageState();
+  State<CameraPageNew> createState() => _CameraPageState();
 }
 
-class _CameraPageState extends State<CameraPage> {
+class _CameraPageState extends State<CameraPageNew> {
   late CameraController _controller;
   late List<CameraDescription> cameras;
   bool isCamerasInitialized = false;
@@ -21,16 +21,12 @@ class _CameraPageState extends State<CameraPage> {
     cameras = await availableCameras();
     setState(() {
       isCamerasInitialized = true;
-      _controller = CameraController(
-        cameras[1],
-        ResolutionPreset.max,
-        imageFormatGroup: ImageFormatGroup.yuv420,); // Initialize the controller here
+      _controller = CameraController(cameras[0], ResolutionPreset.max); // Initialize the controller here
     });
     _controller.initialize().then((_) {
       if (!mounted) {
         return;
       }
-      setState(() {});
     });
   }
     
@@ -47,12 +43,12 @@ class _CameraPageState extends State<CameraPage> {
       return Container();
     }
     return Scaffold(
-      body: Stack(children: [
-        Container(
-          alignment: Alignment.center,
-          height: double.infinity,
-          child: Expanded(flex: 1, child: CameraPreview(_controller)),
-        )
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          Center(
+            child: CameraPreview(_controller),
+          )
       ]),
     );
   }

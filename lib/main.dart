@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ml_espresso_app/pages/camera.dart';
+import 'package:ml_espresso_app/pages/camera_copy.dart';
 import 'package:ml_espresso_app/pages/logs.dart';
 import 'package:ml_espresso_app/pages/settings.dart';
 import 'package:camera/camera.dart';
