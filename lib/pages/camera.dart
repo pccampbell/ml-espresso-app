@@ -56,8 +56,8 @@ class _CameraPageState extends State<CameraPage> {
         _controller.startImageStream((CameraImage image) {
           // Process the camera frame with your TFLite model here
           // _runModel(image);
-          setState(() {});
         });
+        setState(() {});
       }
     }
   }
