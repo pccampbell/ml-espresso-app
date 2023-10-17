@@ -1,6 +1,8 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
+
 
 class CameraPage extends StatefulWidget {
   @override
@@ -37,18 +39,27 @@ class _CameraPageState extends State<CameraPage> {
     });
   }
 
+  // Future<void> _loadModel() async {
+  //   String res = await Tflite.loadModel(
+  //     model: 'assets/model.tflite',
+  //     labels: 'assets/labels.txt',
+  //   );
+  // }
+
   void _startStopImageStream() {
     print("button pressed");
-    // if (isCamerasInitialized) {
-    //   if (_controller.value.isStreamingImages) {
-    //     _controller.stopImageStream();
-    //   } else {
-    //     _controller.startImageStream((CameraImage image) {
-    //       // Process the camera frame with your TFLite model here
-    //       _runModel(image);
-    //     });
-    //   }
-    // }
+    if (isCamerasInitialized) {
+      if (_controller.value.isStreamingImages) {
+        _controller.stopImageStream();
+        setState(() {});
+      } else {
+        _controller.startImageStream((CameraImage image) {
+          // Process the camera frame with your TFLite model here
+          // _runModel(image);
+          setState(() {});
+        });
+      }
+    }
   }
 
   @override
@@ -73,10 +84,21 @@ class _CameraPageState extends State<CameraPage> {
             );
           },
         ),
+        if (_controller.value.isStreamingImages)
+          Center(
+            child: Text(
+              'Processing Image Stream...',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ),
         Positioned(
-          bottom: 20.0,
-          left: 20.0,
-          right: 20.0,
+          bottom: 10.0,
+          left: 80.0,
+          right: 80.0,
           child: ElevatedButton(
             onPressed: _startStopImageStream,
             child: Text(_controller.value.isStreamingImages ? 'Stop Image Stream' : 'Start Image Stream'),

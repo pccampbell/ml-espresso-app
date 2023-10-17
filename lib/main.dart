@@ -57,7 +57,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         title: Text(titleText),
       ),
       body: Center(
@@ -67,32 +67,32 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       bottomNavigationBar: BottomAppBar(
+        padding: EdgeInsets.all(2.0),
+        height: 65,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            // Spacer(),
             IconButton(
-                icon: Icon(Icons.list_alt, size: 35),
+                icon: Icon(Icons.list_alt, size: 38),
                 onPressed: () {
                   setState(() {
                     selectedPageIndex = 0;
                   });
                 }),
             FloatingActionButton(
-                child: Icon(Icons.photo_camera, size: 35),
-                onPressed: () {
-                  setState(() {
-                    selectedPageIndex = 1;
-                  });
-                }),
+              child: Icon(Icons.photo_camera, size: 38),
+              onPressed: () {
+                setState(() {
+                  selectedPageIndex = 1;
+                });
+              }),
             IconButton(
-                icon: Icon(Icons.settings, size: 35),
+                icon: Icon(Icons.settings, size: 38),
                 onPressed: () {
                   setState(() {
                     selectedPageIndex = 2;
                   });
                 }),
-            // Spacer(),
           ],
         ),
       ),

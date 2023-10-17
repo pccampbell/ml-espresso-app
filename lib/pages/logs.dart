@@ -15,7 +15,8 @@ class LogsPage extends StatelessWidget {
     return ListView(
       shrinkWrap: true,
       children: [
-        Padding(
+        Container(
+          color: Theme.of(context).colorScheme.primaryContainer,
           padding: const EdgeInsets.all(15),
           child: Text('Diddle'),
         ),
