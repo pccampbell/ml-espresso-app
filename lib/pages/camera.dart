@@ -4,12 +4,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 
-class CameraPage extends StatefulWidget {
+class CameraPageOLD extends StatefulWidget {
   @override
-  State<CameraPage> createState() => _CameraPageState();
+  State<CameraPageOLD> createState() => _CameraPageOLDState();
 }
 
-class _CameraPageState extends State<CameraPage> {
+class _CameraPageOLDState extends State<CameraPageOLD> {
   late CameraController _controller;
   late List<CameraDescription> cameras;
   bool isCamerasInitialized = false;
