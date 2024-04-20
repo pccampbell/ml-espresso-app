@@ -1,9 +1,9 @@
-import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
-import 'dart:isolate';
+import 'package:ml_espresso_app/util/model.dart';
+import 'package:ml_espresso_app/util/box_ui.dart';
+
+
 
 class CameraPage extends StatefulWidget {
   @override
@@ -14,12 +14,12 @@ class _CameraPageState extends State<CameraPage> {
   late CameraController _controller;
   late List<CameraDescription> cameras;
   bool isCamerasInitialized = false;
+  List<Rect> _detectedBoxes = [];
 
   @override
   void initState() {
     super.initState();
     _initializeCameras();
-    _loadModel();
   }
 
   Future<void> _initializeCameras() async {
@@ -40,14 +40,6 @@ class _CameraPageState extends State<CameraPage> {
     });
   }
 
-  Future<void> _loadModel() async {
-    // Load your TFLite model here
-    // String res = await Tflite.loadModel(
-    //   model: 'assets/model.tflite',
-    //   labels: 'assets/labels.txt',
-    // );
-  }
-
  void _startStopImageStream() {
     if (isCamerasInitialized) {
       if (_controller.value.isStreamingImages) {
@@ -58,9 +50,9 @@ class _CameraPageState extends State<CameraPage> {
           }
         });
       } else {
-        _controller.startImageStream((CameraImage image) {
-          // This is where you would process the image with your TFLite model
-          // For now, we're simulating a non-blocking operation
+        _controller.startImageStream((CameraImage image) async {
+          // Process each camera frame
+          List<Rect> detectedTextRectangles = await detectText(image);
           print("Processing image stream...");
         }).then((_) {
           // Ensure the UI is updated to reflect the stream has started
@@ -70,21 +62,6 @@ class _CameraPageState extends State<CameraPage> {
         });
       }
     }
-  }
-
-  // Future<void> _runModel(CameraImage image) async {
-  //   // Convert CameraImage to a format your model expects, typically Uint8List
-  //   // This is a placeholder function, implement according to your model's need
-  //   var modelInput = _convertCameraImageToModelInput(image);
-
-  //   // Run your TFLite model here asynchronously
-  //   // var recognitionResults = await Tflite.runModelOnBinary(binary: modelInput);
-  // }
-
-  Uint8List _convertCameraImageToModelInput(CameraImage image) {
-    // Conversion logic here
-    // This is highly dependent on your model's input requirements
-    return Uint8List(0); // Placeholder, implement your conversion logic
   }
 
   @override
@@ -109,6 +86,10 @@ class _CameraPageState extends State<CameraPage> {
               child: CameraPreview(_controller),
             );
           },
+        ),
+        CustomPaint(
+          size: Size.infinite, // Use this to cover the camera preview
+          painter: CustomBoxPainter(_detectedBoxes), // Pass the list of boxes here
         ),
         Positioned(
           bottom: 10.0,
