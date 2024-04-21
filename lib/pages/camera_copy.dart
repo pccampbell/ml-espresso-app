@@ -23,6 +23,9 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   Future<void> _initializeCameras() async {
+    // Load the model before initializing the camera
+    await loadModel();  // Ensure this is awaited
+    
     cameras = await availableCameras();
     setState(() {
       isCamerasInitialized = true;

@@ -7,10 +7,16 @@ import 'package:camera/camera.dart';
 import 'package:ml_espresso_app/util/image_utils.dart';
 
 Interpreter? _interpreter;
+IsolateInterpreter? _isolateInterpreter;
 
 Future<void> loadModel() async {
-  _interpreter = await Interpreter.fromAsset(
-      'assets/lite-model_east-text-detector_fp16_1.tflite');
+  // Load the model and create the interpreter
+  _interpreter = await Interpreter.fromAsset('assets/lite-model_east-text-detector_fp16_1.tflite');
+
+  // Create an IsolateInterpreter from the main interpreter's address
+  if (_interpreter != null) {
+    _isolateInterpreter = await IsolateInterpreter.create(address: _interpreter!.address);
+  }
 }
 
 // Function to convert an image to a Uint8List with a specified channel order
@@ -114,7 +120,7 @@ Future<List<Rect>> detectText(CameraImage cameraImage) async {
   };
 
   // Run inference
-  _interpreter?.runForMultipleInputs(inputs, outputs);
+  _isolateInterpreter?.runForMultipleInputs(inputs, outputs);
 
   // printTensorData(outputBoundingBoxes, 1, 80, 80, 5);  // Print bounding boxes
   // printTensorData(outputScores, 1, 80, 80, 5);   
