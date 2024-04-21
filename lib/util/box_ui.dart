@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
-class CustomBoxPainter extends CustomPainter {
-  final List<Rect> boxes;
+class OverlayPainter extends CustomPainter {
+  final List<Rect> rectangles;
+  final Size imageSize;
+  final Size widgetSize;
 
-  CustomBoxPainter(this.boxes);
+  OverlayPainter(this.rectangles, this.imageSize, this.widgetSize);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -12,16 +14,22 @@ class CustomBoxPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
-    for (var box in boxes) {
-      canvas.drawRect(box, paint);
+    for (var rect in rectangles) {
+      // Scale the rectangle coordinates to the widget size
+      double scaleX = widgetSize.width / imageSize.width;
+      double scaleY = widgetSize.height / imageSize.height;
+      Rect scaledRect = Rect.fromLTRB(
+        rect.left * scaleX,
+        rect.top * scaleY,
+        rect.right * scaleX,
+        rect.bottom * scaleY,
+      );
+      canvas.drawRect(scaledRect, paint);
     }
   }
 
   @override
-  @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    // Implement your logic to determine if the painter should repaint
-    // For simplicity, you can just return true
     return true;
   }
 }

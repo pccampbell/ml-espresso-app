@@ -43,50 +43,59 @@ Float32List prepareImageForModel(Image image) {
   return buffer;
 }
 
-List<Rect> parseBoundingBoxes(Float32List boundingBoxes, Float32List scores, int numCells, int elementsPerBox, double threshold) {
-  // const int numGridCells = 80; // From the model output dimension
-  // const int elementsPerBox = 5; // x, y, width, height, and confidence
-  // List<Rect> boxes = [];
-  // for (int y = 0; y < numGridCells; y++) {
-  //   for (int x = 0; x < numGridCells; x++) {
-  //     int idx = (y * numGridCells + x) * elementsPerBox;
-      
-  //     // Normalize coordinates and size by the grid size and image size
-  //     double cx = (boundingBoxes[idx] / numGridCells) * width;
-  //     double cy = (boundingBoxes[idx + 1] / numGridCells) * height;
-  //     double w = (boundingBoxes[idx + 2] / numGridCells) * width;
-  //     double h = (boundingBoxes[idx + 3] / numGridCells) * height;
-
-  //     // The fifth element is typically used for the confidence score
-  //     double score = scores[idx + 4];
-
-  //     // Filter out low confidence detections
-  //     if (score > 0.5) { // Threshold can be adjusted
-  //       // Create a rectangle from the bounding box
-  //       boxes.add(Rect.fromLTWH(cx - w / 2, cy - h / 2, w, h));
-  //     }
-  //   }
-  // }
+List<Rect> parseBoundingBoxes(Float32List boundingBoxes, Float32List scores, int width, int height, double threshold, {bool calculateAverage = false}) {
+  const int numGridCells = 80; // From the model output dimension
+  const int elementsPerBox = 5; // x, y, width, height, and confidence
 
   List<Rect> boxes = [];
-  for (int i = 0; i < numCells; i++) {
-      for (int j = 0; j < numCells; j++) {
-          int index = (i * numCells + j) * elementsPerBox;
-          double score = scores[index + 4]; // Assuming score is the fifth element
-          if (score > threshold) {
-              double x = boundingBoxes[index];
-              double y = boundingBoxes[index + 1];
-              double width = boundingBoxes[index + 2];
-              double height = boundingBoxes[index + 3];
-              Rect box = Rect.fromLTWH(x, y, width, height);
-              boxes.add(box);
-              print("Box at [$i, $j]: ${box.toString()} with score: $score");
-          }
+  double totalScore = 0;
+  int count = 0;
+
+  for (int y = 0; y < numGridCells; y++) {
+    for (int x = 0; x < numGridCells; x++) {
+      int idx = (y * numGridCells + x) * elementsPerBox;
+      
+      double score = scores[idx + 4];
+      if (score > threshold) {
+        double cx = (boundingBoxes[idx] / numGridCells) * width;
+        double cy = (boundingBoxes[idx + 1] / numGridCells) * height;
+        double w = (boundingBoxes[idx + 2] / numGridCells) * width;
+        double h = (boundingBoxes[idx + 3] / numGridCells) * height;
+        boxes.add(Rect.fromLTWH(cx - w / 2, cy - h / 2, w, h));
+        
+        totalScore += score;
+        count++;
       }
+    }
   }
 
+  double averageScore = count > 0 ? totalScore / count : 0.0;
+  if (calculateAverage) {
+    print("Detected ${boxes.length} boxes with an average confidence score of ${averageScore.toStringAsFixed(2)}");
+  }
+  
   return boxes;
 }
+
+  // List<Rect> boxes = [];
+  // for (int i = 0; i < numCells; i++) {
+  //     for (int j = 0; j < numCells; j++) {
+  //         int index = (i * numCells + j) * elementsPerBox;
+  //         double score = scores[index + 4]; // Assuming score is the fifth element
+  //         if (score > threshold) {
+  //             double x = boundingBoxes[index];
+  //             double y = boundingBoxes[index + 1];
+  //             double width = boundingBoxes[index + 2];
+  //             double height = boundingBoxes[index + 3];
+  //             Rect box = Rect.fromLTWH(x, y, width, height);
+  //             boxes.add(box);
+  //             print("Box at [$i, $j]: ${box.toString()} with score: $score");
+  //         }
+  //     }
+  // }
+
+  // return boxes;
+// }
 
 void printTensorData(Float32List tensor, int depth, int height, int width, int channels) {
     for (int d = 0; d < depth; d++) {
@@ -126,8 +135,7 @@ Future<List<Rect>> detectText(CameraImage cameraImage) async {
   // printTensorData(outputScores, 1, 80, 80, 5);   
 
   // Parse outputs to create a list of bounding boxes
-  List<Rect> boxes = parseBoundingBoxes(outputBoundingBoxes, outputScores, 80, 5, 0.1);
-
+  List<Rect> boxes = parseBoundingBoxes(outputBoundingBoxes, outputScores, 80, 5, 0.1, calculateAverage: true);
   return boxes;
 }
 

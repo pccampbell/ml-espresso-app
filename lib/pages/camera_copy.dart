@@ -25,13 +25,13 @@ class _CameraPageState extends State<CameraPage> {
   Future<void> _initializeCameras() async {
     // Load the model before initializing the camera
     await loadModel();  // Ensure this is awaited
-    
+
     cameras = await availableCameras();
     setState(() {
       isCamerasInitialized = true;
       _controller = CameraController(
         cameras[0],
-        ResolutionPreset.high,
+        ResolutionPreset.low,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
     });
@@ -53,9 +53,24 @@ class _CameraPageState extends State<CameraPage> {
           }
         });
       } else {
+        int frameSkipCount = 0;
         _controller.startImageStream((CameraImage image) async {
-          // Process each camera frame
-          List<Rect> detectedTextRectangles = await detectText(image);
+          frameSkipCount++;
+          if (frameSkipCount >= 5) { // Skip every 4 frames
+            final stopwatch = Stopwatch()..start();
+            List<Rect> detectedTextRectangles = await detectText(image);
+            stopwatch.stop();  // Stop the stopwatch after inference is done
+            print("Inference took: ${stopwatch.elapsedMilliseconds} ms");
+            
+            // Update the state with new boxes to trigger a repaint
+            setState(() {
+              _detectedBoxes = detectedTextRectangles;
+            });
+            
+            frameSkipCount = 0;
+          }
+          // // Process each camera frame
+          // List<Rect> detectedTextRectangles = await detectText(image);
           print("Processing image stream...");
         }).then((_) {
           // Ensure the UI is updated to reflect the stream has started
@@ -78,6 +93,15 @@ class _CameraPageState extends State<CameraPage> {
     if (!isCamerasInitialized || !_controller.value.isInitialized) {
       return Container();
     }
+
+    final size = MediaQuery.of(context).size;  // Get the screen size
+    final camera = _controller.value;
+    final scale = size.aspectRatio * camera.aspectRatio;
+
+    // To ensure the aspect ratio is preserved
+    final width = scale < 1 ? size.width : size.height * camera.aspectRatio;
+    final height = scale < 1 ? size.width / camera.aspectRatio : size.height;
+
     return Scaffold(
       body: Stack(children: [
         LayoutBuilder(
@@ -91,8 +115,9 @@ class _CameraPageState extends State<CameraPage> {
           },
         ),
         CustomPaint(
-          size: Size.infinite, // Use this to cover the camera preview
-          painter: CustomBoxPainter(_detectedBoxes), // Pass the list of boxes here
+          // size: Size.infinite, // Use this to cover the camera preview
+          size: Size(width, height),
+          painter: OverlayPainter(_detectedBoxes, Size(camera.previewSize!.width, camera.previewSize!.height), Size(width, height)),
         ),
         Positioned(
           bottom: 10.0,
