@@ -10,6 +10,7 @@ Future<image_lib.Image?> convertCameraImageToImage(
   image_lib.Image image;
 
   if (cameraImage.format.group == ImageFormatGroup.yuv420) {
+    print('converting from yuv420');
     image = convertYUV420ToImage(cameraImage);
   } else if (cameraImage.format.group == ImageFormatGroup.bgra8888) {
     image = convertBGRA8888ToImage(cameraImage);
@@ -18,6 +19,7 @@ Future<image_lib.Image?> convertCameraImageToImage(
   } else if (cameraImage.format.group == ImageFormatGroup.nv21) {
     image = convertNV21ToImage(cameraImage);
   } else {
+    print("error in convert image no format detecetd");
     return null;
   }
 
@@ -68,6 +70,42 @@ image_lib.Image convertYUV420ToImage(CameraImage cameraImage) {
   }
   return image;
 }
+
+// image_lib.Image convertYUV420ToImage(CameraImage cameraImage) {
+//   final width = cameraImage.width;
+//   final height = cameraImage.height;
+
+//   final uvRowStride = cameraImage.planes[1].bytesPerRow;
+//   final uvPixelStride = cameraImage.planes[1].bytesPerPixel!;
+
+//   final yPlane = cameraImage.planes[0].bytes;
+//   final uPlane = cameraImage.planes[1].bytes;
+//   final vPlane = cameraImage.planes[2].bytes;
+
+//   var image = image_lib.Image(width: width, height: height);  // Create an empty image buffer with specified dimensions
+
+//   // Correctly calculate UV plane starting indices for each row
+//   for (var y = 0; y < height; y++) {
+//     final yIndex = y * width;
+//     final uvIndex = (y ~/ 2) * uvRowStride;  // UV rows are half as frequent as Y rows
+
+//     for (var x = 0; x < width; x++) {
+//       final uvOffset = (x ~/ 2) * uvPixelStride;  // UV columns are half as frequent as Y columns
+
+//       final yValue = yPlane[yIndex + x] & 0xFF;
+//       final uValue = uPlane[uvIndex + uvOffset] & 0xFF;
+//       final vValue = vPlane[uvIndex + uvOffset] & 0xFF;
+
+//       // Convert YUV to RGB
+//       var r = (yValue + 1.402 * (vValue - 128)).round().clamp(0, 255);
+//       var g = (yValue - 0.344136 * (uValue - 128) - 0.714136 * (vValue - 128)).round().clamp(0, 255);
+//       var b = (yValue + 1.772 * (uValue - 128)).round().clamp(0, 255);
+
+//       image.setPixelRgba(x, y, r, g, b, 255);
+//     }
+//   }
+//   return image;
+// }
 
 image_lib.Image convertBGRA8888ToImage(CameraImage cameraImage) {
   // Extract the bytes from the CameraImage
