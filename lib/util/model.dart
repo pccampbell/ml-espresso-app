@@ -22,10 +22,10 @@ Future<void> loadModel() async {
   }
 }
 
-Future<void> saveDebugImage(Image image) async {
+Future<void> saveDebugImage(Image image, String filename) async {
   final directory =
       await getApplicationDocumentsDirectory(); // Get the directory
-  final path = '${directory.path}/debug_image.png';
+  final path = '${directory.path}/$filename';
   var encoder = PngEncoder();
   var png = encoder.encode(image);
   File(path).writeAsBytesSync(png);
@@ -33,11 +33,20 @@ Future<void> saveDebugImage(Image image) async {
 }
 
 // Function to convert an image to a Uint8List with a specified channel order
-Float32List prepareImageForModel(Image image) {
+Future<Float32List> prepareImageForModel(Image image, {bool saveDebug = false}) async {
   int inputSize = 320; // Example size, adjust according to your model
+  
+  // Save original converted image for debugging
+  if (saveDebug) {
+    await saveDebugImage(image, 'debug_original.png');
+  }
+  
   Image resizedImg = copyResize(image, width: inputSize, height: inputSize);
 
-  saveDebugImage(resizedImg);
+  // Save resized image for debugging
+  if (saveDebug) {
+    await saveDebugImage(resizedImg, 'debug_resized.png');
+  }
 
   // Get the bytes of the image with the specified channel order
   // Uint8List imageBytes = resizedImg.toUint8List();
@@ -130,12 +139,18 @@ void printTensorData(
   }
 }
 
+int _frameCounter = 0;
+
 Future<List<Rect>> detectText(CameraImage cameraImage) async {
   // Preprocessing the camera image
   Image? image = await convertCameraImageToImage(cameraImage);
 
+  // Save debug images every 30 frames (once per ~5 seconds at 6 fps)
+  bool shouldSaveDebug = (_frameCounter % 30 == 0);
+  _frameCounter++;
+
   // Converting image for model input
-  Float32List inputTensor = prepareImageForModel(image!);
+  Float32List inputTensor = await prepareImageForModel(image!, saveDebug: shouldSaveDebug);
 
   // Assuming the interpreter is correctly initialized
   var outputBoundingBoxes =

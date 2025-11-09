@@ -30,42 +30,40 @@ image_lib.Image convertYUV420ToImage(CameraImage cameraImage) {
   final width = cameraImage.width;
   final height = cameraImage.height;
 
-  final uvRowStride = cameraImage.planes[1].bytesPerRow;
-  final uvPixelStride = cameraImage.planes[1].bytesPerPixel!;
-
   final yPlane = cameraImage.planes[0].bytes;
   final uPlane = cameraImage.planes[1].bytes;
   final vPlane = cameraImage.planes[2].bytes;
+  
+  final uvRowStride = cameraImage.planes[1].bytesPerRow;
+  final uvPixelStride = cameraImage.planes[1].bytesPerPixel!;
+  final yRowStride = cameraImage.planes[0].bytesPerRow;
 
   final image = image_lib.Image(width: width, height: height);
 
-  var uvIndex = 0;
+  for (var h = 0; h < height; h++) {
+    for (var w = 0; w < width; w++) {
+      // Y plane - straightforward indexing with row stride
+      final yIndex = h * yRowStride + w;
+      final yValue = yPlane[yIndex];
+      
+      // UV planes are subsampled by 2 in both dimensions (4:2:0)
+      final uvRow = h ~/ 2;
+      final uvCol = w ~/ 2;
+      final uvIndex = uvRow * uvRowStride + uvCol * uvPixelStride;
 
-  for (var y = 0; y < height; y++) {
-    var pY = y * width;
-    var pUV = uvIndex;
+      final uValue = uPlane[uvIndex];
+      final vValue = vPlane[uvIndex];
 
-    for (var x = 0; x < width; x++) {
-      final yValue = yPlane[pY];
-      final uValue = uPlane[pUV];
-      final vValue = vPlane[pUV];
+      // Convert YUV to RGB using ITU-R BT.601 conversion
+      final y = yValue.toDouble();
+      final u = uValue.toDouble() - 128.0;
+      final v = vValue.toDouble() - 128.0;
+      
+      final r = (y + 1.402 * v).clamp(0, 255);
+      final g = (y - 0.344136 * u - 0.714136 * v).clamp(0, 255);
+      final b = (y + 1.772 * u).clamp(0, 255);
 
-      final r = yValue + 1.402 * (vValue - 128);
-      final g = yValue - 0.344136 * (uValue - 128) - 0.714136 * (vValue - 128);
-      final b = yValue + 1.772 * (uValue - 128);
-
-      image.setPixelRgba(x, y, r.toInt(), g.toInt(), b.toInt(), 255);
-
-      pY++;
-      if (x % 2 == 1 && uvPixelStride == 2) {
-        pUV += uvPixelStride;
-      } else if (x % 2 == 1 && uvPixelStride == 1) {
-        pUV++;
-      }
-    }
-
-    if (y % 2 == 1) {
-      uvIndex += uvRowStride;
+      image.setPixelRgba(w, h, r.toInt(), g.toInt(), b.toInt(), 255);
     }
   }
   return image;

@@ -1,9 +1,8 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:ml_espresso_app/util/model.dart';
-import 'package:ml_espresso_app/util/box_ui.dart';
-
-
+import 'package:ml_espresso_app/util/ocr_service.dart';
+import 'package:ml_espresso_app/models/weight_reading.dart';
+import 'package:ml_espresso_app/widgets/weight_chart.dart';
 
 class CameraPage extends StatefulWidget {
   @override
@@ -14,7 +13,12 @@ class _CameraPageState extends State<CameraPage> {
   late CameraController _controller;
   late List<CameraDescription> cameras;
   bool isCamerasInitialized = false;
-  List<Rect> _detectedBoxes = [];
+  
+  // OCR and data tracking
+  double? _currentWeight;
+  ExtractionSession? _currentSession;
+  bool _isRecording = false;
+  String _statusMessage = 'Ready';
 
   @override
   void initState() {
@@ -23,9 +27,6 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   Future<void> _initializeCameras() async {
-    // Load the model before initializing the camera
-    await loadModel();  // Ensure this is awaited
-
     cameras = await availableCameras();
     setState(() {
       isCamerasInitialized = true;
@@ -43,47 +44,76 @@ class _CameraPageState extends State<CameraPage> {
     });
   }
 
- void _startStopImageStream() {
+  void _startStopRecording() {
     if (isCamerasInitialized) {
-      if (_controller.value.isStreamingImages) {
-        _controller.stopImageStream().then((_) {
-          // Ensure the button state is updated to reflect the stream has stopped
-          if (mounted) {
-            setState(() {});
-          }
-        });
+      if (_isRecording) {
+        _stopRecording();
       } else {
-        int frameSkipCount = 0;
-        _controller.startImageStream((CameraImage image) async {
-          frameSkipCount++;
-          if (frameSkipCount >= 5) { // Skip every 4 frames
-            final stopwatch = Stopwatch()..start();
-            List<Rect> detectedTextRectangles = await detectText(image);
-            stopwatch.stop();  // Stop the stopwatch after inference is done
-            print("Inference took: ${stopwatch.elapsedMilliseconds} ms");
-            
-            // Update the state with new boxes to trigger a repaint
-            setState(() {
-              _detectedBoxes = detectedTextRectangles;
-            });
-            
-            frameSkipCount = 0;
-          }
-          // // Process each camera frame
-          // List<Rect> detectedTextRectangles = await detectText(image);
-          print("Processing image stream...");
-        }).then((_) {
-          // Ensure the UI is updated to reflect the stream has started
-          if (mounted) {
-            setState(() {});
-          }
-        });
+        _startRecording();
       }
     }
   }
 
+  void _startRecording() {
+    setState(() {
+      _isRecording = true;
+      _currentSession = ExtractionSession(startTime: DateTime.now());
+      _statusMessage = 'Recording...';
+    });
+
+    int frameSkipCount = 0;
+    _controller.startImageStream((CameraImage image) async {
+      frameSkipCount++;
+      if (frameSkipCount >= 10) { // Process every 10th frame (~3 fps)
+        frameSkipCount = 0;
+        
+        if (!_isRecording) return;
+        
+        try {
+          final stopwatch = Stopwatch()..start();
+          double? weight = await OcrService.extractWeightFromImage(image);
+          stopwatch.stop();
+          
+          if (weight != null && mounted) {
+            setState(() {
+              _currentWeight = weight;
+              _currentSession?.addReading(weight);
+              _statusMessage = 'OCR: ${stopwatch.elapsedMilliseconds}ms';
+            });
+            print('Weight detected: ${weight}g (${stopwatch.elapsedMilliseconds}ms)');
+          }
+        } catch (e) {
+          print('Error processing frame: $e');
+        }
+      }
+    });
+  }
+
+  void _stopRecording() {
+    if (_controller.value.isStreamingImages) {
+      _controller.stopImageStream();
+    }
+    
+    setState(() {
+      _isRecording = false;
+      _currentSession?.endSession();
+      _statusMessage = 'Stopped';
+    });
+  }
+
+  void _resetSession() {
+    setState(() {
+      _currentSession = null;
+      _currentWeight = null;
+      _statusMessage = 'Ready';
+    });
+  }
+
   @override
   void dispose() {
+    if (_controller.value.isStreamingImages) {
+      _controller.stopImageStream();
+    }
     _controller.dispose();
     super.dispose();
   }
@@ -91,55 +121,108 @@ class _CameraPageState extends State<CameraPage> {
   @override
   Widget build(BuildContext context) {
     if (!isCamerasInitialized || !_controller.value.isInitialized) {
-      return Container();
+      return const Center(child: CircularProgressIndicator());
     }
 
-    final size = MediaQuery.of(context).size;  // Get the screen size
-    final camera = _controller.value;
-    final scale = size.aspectRatio * camera.aspectRatio;
-
-    // To ensure the aspect ratio is preserved
-    final width = scale < 1 ? size.width : size.height * camera.aspectRatio;
-    final height = scale < 1 ? size.width / camera.aspectRatio : size.height;
-
     return Scaffold(
-      body: Stack(children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            // Maintain the aspect ratio of camera preview
-            double aspectRatio = constraints.maxWidth / constraints.maxHeight;
-            return AspectRatio(
-              aspectRatio: aspectRatio,
-              child: CameraPreview(_controller),
-            );
-          },
-        ),
-        CustomPaint(
-          // size: Size.infinite, // Use this to cover the camera preview
-          size: Size(width, height),
-          painter: OverlayPainter(_detectedBoxes, Size(camera.previewSize!.width, camera.previewSize!.height), Size(width, height)),
-        ),
-        Positioned(
-          bottom: 10.0,
-          left: 80.0,
-          right: 80.0,
-          child: ElevatedButton(
-            onPressed: _startStopImageStream,
-            child: Text(_controller.value.isStreamingImages ? 'Stop Image Stream' : 'Start Image Stream'),
-          ),
-        ),
-        if (_controller.value.isStreamingImages)
-          Center(
-            child: Text(
-              'Processing Image Stream...',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+      body: Column(
+        children: [
+          // Camera preview section (top half)
+          Expanded(
+            flex: 1,
+            child: Stack(
+              children: [
+                // Camera preview
+                Center(
+                  child: AspectRatio(
+                    aspectRatio: _controller.value.aspectRatio,
+                    child: CameraPreview(_controller),
+                  ),
+                ),
+                // Current weight overlay
+                Positioned(
+                  top: 20,
+                  left: 20,
+                  right: 20,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          _currentWeight != null
+                              ? '${_currentWeight!.toStringAsFixed(1)} g'
+                              : '--.-',
+                          style: const TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _statusMessage,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-      ]),
+          
+          // Chart section (bottom half)
+          Expanded(
+            flex: 1,
+            child: Container(
+              color: Colors.grey[900],
+              child: _currentSession != null && _currentSession!.readings.isNotEmpty
+                  ? WeightChart(session: _currentSession!)
+                  : const Center(
+                      child: Text(
+                        'Start recording to see the chart',
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                      ),
+                    ),
+            ),
+          ),
+          
+          // Control buttons at the bottom
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.grey[850],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _startStopRecording,
+                  icon: Icon(_isRecording ? Icons.stop : Icons.play_arrow),
+                  label: Text(_isRecording ? 'Stop' : 'Start'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isRecording ? Colors.red : Colors.green,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _isRecording ? null : _resetSession,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reset'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

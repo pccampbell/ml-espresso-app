@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:ml_espresso_app/pages/camera.dart';
-import 'package:ml_espresso_app/pages/camera_copy.dart';
+import 'package:ml_espresso_app/pages/camera_page.dart';
 import 'package:ml_espresso_app/pages/logs.dart';
 import 'package:ml_espresso_app/pages/settings.dart';
-import 'package:camera/camera.dart';
 
 void main() {
   runApp(const MyApp());
@@ -44,7 +42,7 @@ class _MyHomePageState extends State<MyHomePage> {
         titleText = 'Logs';
         break;
       case 1:
-        page = CameraPage();
+        page = CameraPageMain();
         titleText = 'Graph ML';
         break;
       case 2:
