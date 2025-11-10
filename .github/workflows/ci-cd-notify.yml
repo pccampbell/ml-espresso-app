@@ -23,6 +23,7 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
       - run: flutter pub get
+      - run: dart run flutter_launcher_icons:main
       - run: flutter build apk
       - name: Upload to GDrive
         uses: adityak74/google-drive-upload-git-action@main
