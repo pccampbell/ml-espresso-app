@@ -43,6 +43,7 @@ dependencies:
   google_mlkit_text_recognition: ^0.13.1
   fl_chart: ^0.69.0
   permission_handler: ^11.3.1
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -95,3 +96,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/espresso_flow_icon_1.png"
+  adaptive_icon_background: "#4B2E19"  # optional (matches your cozy brown)
+  adaptive_icon_foreground: "assets/images/espresso_flow_icon_1.png"
